@@ -1,4 +1,4 @@
-# Use an official Dart image first, then manually install Flutter 3.5.1
+# Use Debian to install Flutter manually
 FROM debian:bullseye-slim
 
 # Install required packages
@@ -7,12 +7,14 @@ RUN apt-get update && apt-get install -y \
     apt-get clean
 
 # Set Flutter version
-ENV FLUTTER_VERSION=3.5.1
+ENV FLUTTER_VERSION=3.13.0
 ENV FLUTTER_HOME=/flutter
 ENV PATH="$FLUTTER_HOME/bin:$PATH"
 
-# Clone the specific Flutter version
-RUN git clone https://github.com/flutter/flutter.git -b $FLUTTER_VERSION $FLUTTER_HOME
+# Clone Flutter
+RUN git clone https://github.com/flutter/flutter.git $FLUTTER_HOME && \
+    cd $FLUTTER_HOME && \
+    git checkout $FLUTTER_VERSION
 
 # Enable web support
 RUN flutter doctor && flutter config --enable-web
@@ -25,6 +27,6 @@ COPY . .
 RUN flutter pub get
 RUN flutter build web
 
-# Serve with NGINX
+# Serve using NGINX
 FROM nginx:alpine
 COPY --from=0 /app/build/web /usr/share/nginx/html
