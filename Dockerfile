@@ -1,19 +1,18 @@
-# Use the official Flutter image with web support
+# Base image with Flutter and web support
 FROM cirrusci/flutter:latest
 
-# Enable web support (in case it's not enabled)
-RUN flutter channel stable
-RUN flutter upgrade
-RUN flutter config --enable-web
+# Set the working directory
+WORKDIR /app
 
 # Copy project files
-WORKDIR /app
 COPY . .
 
-# Build the Flutter web project
+# Get dependencies
 RUN flutter pub get
+
+# Build the Flutter web app
 RUN flutter build web
 
-# Use a simple web server to serve the content
+# Use NGINX to serve the web app
 FROM nginx:alpine
 COPY --from=0 /app/build/web /usr/share/nginx/html
