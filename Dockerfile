@@ -1,35 +1,32 @@
-FROM debian:bullseye-slim
+# Use the official Flutter image with Dart SDK >= 3.5.1
+FROM ghcr.io/cirruslabs/flutter:3.22.0 as build
 
-# Install required packages
-RUN apt-get update && apt-get install -y \
-    curl git unzip xz-utils zip libglu1-mesa && \
-    apt-get clean
+# Allow Flutter to run as root (important in Docker)
+ENV FLUTTER_ALLOW_ROOT=true
 
-# Override tar to ignore ownership issues
-RUN echo -e '#!/bin/sh\nexec /bin/tar --no-same-owner "$@"' > /usr/local/bin/tar && chmod +x /usr/local/bin/tar
-
-# Set Flutter environment
-ENV FLUTTER_VERSION=3.13.0
-ENV FLUTTER_HOME=/flutter
-ENV PATH="$FLUTTER_HOME/bin:$PATH"
-
-# Clone Flutter SDK
-RUN git clone https://github.com/flutter/flutter.git $FLUTTER_HOME && \
-    cd $FLUTTER_HOME && \
-    git checkout $FLUTTER_VERSION
-
-# Precache web artifacts and enable web
-RUN flutter precache --web
-RUN flutter config --enable-web && flutter doctor
-
-# Set project directory
+# Set working directory
 WORKDIR /app
+
+# Copy necessary files
+COPY pubspec.yaml pubspec.lock ./
+
+# Get dependencies
+RUN flutter pub get
+
+# Copy the rest of the project
 COPY . .
 
-# Get dependencies and build
-RUN flutter pub get
+# Build the Flutter web app
 RUN flutter build web
 
-# Serve with nginx
+# Use a minimal image to serve the built app
 FROM nginx:alpine
-COPY --from=0 /app/build/web /usr/share/nginx/html
+
+# Copy the built web assets to nginx's default public folder
+COPY --from=build /app/build/web /usr/share/nginx/html
+
+# Expose the web port
+EXPOSE 80
+
+# Start nginx server
+CMD ["nginx", "-g", "daemon off;"]
